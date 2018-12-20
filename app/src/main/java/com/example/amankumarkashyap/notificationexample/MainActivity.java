@@ -43,9 +43,12 @@ public class MainActivity extends AppCompatActivity {
         {
             msg = message_from_user.getStringExtra("message");
             messageText.setText(msg);
+            int returnedId = message_from_user.getIntExtra("ID",0);
+            /**
+             * The statement below cancels the notification from the status bar
+             */
+            nm.cancel(returnedId);
         }
-
-        notification = new NotificationCompat.Builder(this,CHANNEL_ID);
 
         notifyBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -57,33 +60,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * This is for the app condition when the "notification" is initialised within onCreate():-
-     * 1.one notification already and another triggered -> the action button added up and time also did not reset
-     * 1.used the simple click of the notification to launch the current activity while the app is still running and then pressed
-     * the generate notification button -> as expected : new notification appeared in the status bar because the onCreate is called.
-     * 2.used sendHello in the notification action and result were similar to the above case.
-     * 3.The Problem is that another time (i.e more than one time )generate notification button is clicked without using any of the 3 methods of the
-     * notification action -> than the time is not reset and the action are also added up.
-     *The solution to the above problem is to initialise the "notification" object in the generateNotification() method
+     * comments in master branch
      */
     public void generateNotification()
     {
+        notification = new NotificationCompat.Builder(this,CHANNEL_ID);
         Intent HelloIntent = new Intent(this,MainActivity.class);
         HelloIntent.putExtra("message","Hello to you");
+        HelloIntent.putExtra("ID",NOTIFICATION_ID);
 
         Intent GoodByeIntent = new Intent(this,MainActivity.class);
         GoodByeIntent.putExtra("message","GoodBye !!");
+        GoodByeIntent.putExtra("ID",NOTIFICATION_ID);
 
         Intent simpleIntent = new Intent(this,MainActivity.class);
 
         /**
-         * Replace the requestCode and check what happens.I have defined two codes and also check what happens when you fire one more notification when already one is
-         * present in the notification drawer.
-         * So what i learned is that the request code should be all different for different pending intent.
-         * But the problem is that i'm getting the intent in onCreate and when the activity is already open and user taps on the action button it does not
-         * perform the desired action so let's try putting that in the onStart() method.
-         *
-         * The above line(only one immediate above line) is incorrect
          *
          * Another thing learned is that if a notification is already existing and another is launched than the old one is replaced with the current one ,I
          * think this is happening because of the flag that is set FLAG_UPDATE_CURRENT(But the time shown beside the app name is the not resetting).
@@ -92,18 +84,33 @@ public class MainActivity extends AppCompatActivity {
          * 1.change the Flags
          * 2.Try using setAutoCancel on all the three action the user can perform(hello,goodbye,simpleStart) so that the notification disappears.
          */
-        PendingIntent helloPending = PendingIntent.getActivity(this,REQUEST_CODE_HELLO,HelloIntent,PendingIntent.FLAG_UPDATE_CURRENT);
-        PendingIntent goodByePending = PendingIntent.getActivity(this,REQUEST_CODE_GOODBYE,GoodByeIntent,PendingIntent.FLAG_UPDATE_CURRENT);
+        PendingIntent helloPending = PendingIntent.getActivity(this,REQUEST_CODE_HELLO,HelloIntent,PendingIntent.FLAG_CANCEL_CURRENT);
+        PendingIntent goodByePending = PendingIntent.getActivity(this,REQUEST_CODE_GOODBYE,GoodByeIntent,PendingIntent.FLAG_ONE_SHOT);
         /**
          * The below intent is not launching the specified activity which is the expected action of this intent?
          */
         PendingIntent simplePending = PendingIntent.getActivity(this,REQUEST_CODE_SIMPLE,simpleIntent,PendingIntent.FLAG_UPDATE_CURRENT);
-
+        /**
+         * Theory about PENDING INTENT FLAGS:
+         *
+         * FLAG_CANCEL_CURRENT-Flag for use with getActivity(Context, int, Intent, int), getBroadcast(Context, int, Intent, int), and getService(Context, int, Intent, int):
+         * if the described PendingIntent already exists, the current one is canceled before generating a new one.
+         *
+         * FLAG_NO_CREATE-Flag for use with getActivity(Context, int, Intent, int), getBroadcast(Context, int, Intent, int), and getService(Context, int, Intent, int):
+         * if the described PendingIntent does not already exist, then simply return null instead of creating it.
+         *
+         * FLAG_ONE_SHOT-Flag for use with getActivity(Context, int, Intent, int), getBroadcast(Context, int, Intent, int), and getService(Context, int, Intent, int):
+         * this PendingIntent can only be used once.
+         *
+         * FLAG_UPDATE_CURRENT-Flag for use with getActivity(Context, int, Intent, int), getBroadcast(Context, int, Intent, int), and getService(Context, int, Intent, int):
+         * if the described PendingIntent already exists, then keep it but its replace its extra data with what is in this new Intent
+         */
         notification.setSmallIcon(R.mipmap.ic_launcher);
         notification.setPriority(NotificationCompat.PRIORITY_HIGH);
         notification.setTicker("Hello !!");
         notification.setDefaults(NotificationCompat.DEFAULT_ALL);
         notification.setContentTitle("First Notification");
+        notification.setAutoCancel(true);
         notification.addAction(R.drawable.ic_launcher_foreground,"Send Hello",helloPending);
         notification.addAction(R.drawable.ic_launcher_background,"Goodbye",goodByePending);
         notification.setContentIntent(simplePending);
